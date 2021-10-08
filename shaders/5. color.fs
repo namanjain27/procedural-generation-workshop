@@ -91,15 +91,19 @@ float noise(float x, float y, float z)
 
 //----------------------------------------------------
 //----------------------------------------------------
+
+//----------------------------------------------------
+// HEIGHT_MAP_GENERATOR
+//----------------------------------------------------
 #define IMAGE_ROWS 50
 #define SCALE 17.5f
 #define SCALE_FROM_CENTER 1
 #define LEVEL_OF_DETAIL 0
-#define SMOOTH_INVERSE_LERP 0
+#define SMOOTH_INVERSE_LERP 1
 #define OCTAVES 4
 #define PERSISTANCE 0.5f
 #define LACUNARITY 2.0f
-#define NORMALIZE_OFFSET 0
+#define NORMALIZE_OFFSET 1
 
 // Inverse Lerp Function
 float linear_step(float l, float u, float a)
@@ -167,13 +171,57 @@ float get_octave_noise(vec2 pos)
 #endif
     return noiseVal;
 }
+//----------------------------------------------------
+//----------------------------------------------------
+// Color Regions
+vec3[8] regions = vec3[8](
+vec3(0.15f, 0.15f, 0.75f), // DARK BLUE
+vec3(0.2f, 0.5f, 1.0f), // OCEAN BLUE
+vec3(0.98f, 0.88f, 0.2f), // SAND YELLOW
+vec3(0.2f, 0.8f, 0.2f), // LIGHT GREEN
+vec3(0.2f, 0.60f, 0.2f), // DARK GREEN
+vec3(0.6f, 0.35f, 0.1f), // LIGHT BROWN
+vec3(0.25f, 0.1f, 0.05f), // DARK BROWN
+vec3(0.85f, 0.85f, 1.0f) // SNOW BLUE
+);
+
+// Start height for all regions
+float[8] heights = float[8](
+0.00f, // DEEP OCEAN
+0.025f, // OCEAN
+0.35f, // COAST
+0.365f, // PLAINS
+0.6f, // FORESTS
+0.695f, // HILLS
+0.82f, // MOUNTAINS
+0.93f // SNOW
+);
+
+// Gets the index of the region height lies in
+int get_region_index(float h)
+{
+    int index = -1;
+    for(int i = 0; i < 8; i++)
+    {
+        if(h >= heights[i])
+        {
+            index++;
+        }
+        else
+        {
+            break;
+        }
+    }
+    return index;
+}
 
 
 vec3 get_color(vec2 pos)
 {
-    float h=get_octave_noise(pos);
-    vec3 col=vec3(h);
-    return col;
+    float h = get_octave_noise(pos);
+    int index=get_region_index(h);
+    return (index!=-1)?regions[index]:regions[0];
+    
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
@@ -181,7 +229,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 uv = fragCoord/iResolution.y;
     
     vec3 col=get_color(uv);
-    
+
     // Output to screen
     fragColor = vec4(col,1.0);
 }
