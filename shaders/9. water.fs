@@ -37,7 +37,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv=fragCoord/iResolution.y;
     uv*=float(GRID_HEIGHT);
-    float h=get_voronoi_noise(uv);
+    vec2 offset=vec2(0.0f);
+    offset.y=-iTime*3.0f;
+    offset.x=cos(iTime*0.5f)*2.0f;
+    float h=get_voronoi_noise(uv+offset);
     h=clamp(h,0.0f,1.0f);
     h=pow(h,p);
     vec3 col=vec3(h)*highlightCol+waterCol;
