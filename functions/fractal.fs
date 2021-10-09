@@ -118,7 +118,7 @@ float perlin(vec2 pos)
     return noise(pos.x, pos.y, 0.0f);
 }
 
-float get_octave_noise(vec2 pos)
+float get_fractal_noise(vec2 pos)
 {
     float rows = float(IMAGE_ROWS);
     pos *= rows;
@@ -151,7 +151,10 @@ float get_octave_noise(vec2 pos)
     pos *= float(LEVEL_OF_DETAIL);
 #endif
 
-    vec2 offset = 1.0f * vec2(iTime * 1.25f, iTime * 1.25f);
+    vec2 offset = 0.2f * vec2(iTime * 1.25f, iTime * 1.25f);
+    vec2 shift=vec2(45.0f);
+    mat2 rot = mat2(cos(1.5), sin(1.5),
+                    -sin(1.5), cos(1.5));
     
     for (int i = 0; i < octaves; i++)
     {
@@ -167,11 +170,23 @@ float get_octave_noise(vec2 pos)
         // Decrease A and increase F
         amplitude *= persistence;
         frequency *= lacunarity;
-    }    
+        pos=pos*rot+shift;
+    }
 
     // Inverser lerp so that noiseval lies between 0 and 1 
-    noiseVal=linear_step(0.0f,0.7f,noiseVal);
+    noiseVal=linear_step(0.0f,1.5f,noiseVal);
     return noiseVal;
 }
 //----------------------------------------------------
 //----------------------------------------------------
+
+#define SHARPNESS 5.5f
+#define OFFSET 1.0f
+
+float get_fractal_height(vec2 pos)
+{
+    float h=get_fractal_noise(pos);
+    h = OFFSET-h;
+    h = pow(h,SHARPNESS);
+    return h;
+}
