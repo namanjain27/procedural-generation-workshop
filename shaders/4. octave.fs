@@ -121,7 +121,7 @@ float get_octave_noise(vec2 pos)
     float scale = float(SCALE);
     if(scale <= 0.0f)
     {
-        scale += 0.001f;
+        scale = 0.001f;
     }
     
     int octaves = int(OCTAVES);
@@ -139,9 +139,11 @@ float get_octave_noise(vec2 pos)
     float frequency = 1.0f;
     float noiseVal = 0.0f;
     
+    // Add LODs
 #if LEVEL_OF_DETAIL
-    pos = vec2(floor(pos.x), floor(pos.y));
     pos /= float(LEVEL_OF_DETAIL);
+    pos = vec2(floor(pos.x), floor(pos.y));
+    pos *= float(LEVEL_OF_DETAIL);
 #endif
 
     vec2 offset = 1.0f * vec2(iTime * 1.25f, iTime * 1.25f);
@@ -157,9 +159,12 @@ float get_octave_noise(vec2 pos)
 #endif
         float noise = (perlin(vec2(sampleX, sampleY)) * 2.0f) - 1.0f;
         noiseVal += noise * amplitude;
+        // Decrease A and increase F
         amplitude *= persistence;
         frequency *= lacunarity;
-    }     
+    }    
+
+    // Inverser lerp so that noiseval lies between 0 and 1 
 #if SMOOTH_INVERSE_LERP
     noiseVal = smoothstep(-0.95f, 1.1f, noiseVal);
 #else
@@ -171,15 +176,20 @@ float get_octave_noise(vec2 pos)
 
 vec3 get_color(vec2 pos)
 {
+    // Get height map
     float h=get_octave_noise(pos);
+    
+    // Returns height map's color
     vec3 col=vec3(h);
     return col;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
+    // Get UVs
     vec2 uv = fragCoord/iResolution.y;
     
+    // Get Final Color
     vec3 col=get_color(uv);
     
     // Output to screen
