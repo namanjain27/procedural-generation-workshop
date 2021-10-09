@@ -1,3 +1,6 @@
+//----------------------------------------------------
+// VORONOI_NOISE_GENERATOR
+//----------------------------------------------------
 #define GRID_HEIGHT 10
 
 float rand(vec2 pos)
@@ -24,6 +27,9 @@ float get_voronoi_noise(vec2 pos)
     }
     return dist/sqrt(2.0f);
 }
+//----------------------------------------------------
+//----------------------------------------------------
+
 
 vec3 get_color(vec2 pos)
 {
@@ -33,9 +39,11 @@ vec3 get_color(vec2 pos)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
+    // Gets UVs
     vec2 uv = fragCoord/iResolution.y;
     uv*=float(GRID_HEIGHT);
     
+    // Gets final Col
     vec3 col = get_color(uv);
 
     // Output to screen
