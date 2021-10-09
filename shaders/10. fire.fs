@@ -88,12 +88,12 @@ float noise(float x, float y, float z)
         w);
     return (res + 1.0f) / 2.0f;
 }
-
 //----------------------------------------------------
 //----------------------------------------------------
 
+
 //----------------------------------------------------
-// HEIGHT_MAP_GENERATOR
+// OCTAVE_NOISE_GENERATOR
 //----------------------------------------------------
 #define IMAGE_ROWS 50
 #define SCALE 17.5f
@@ -125,7 +125,7 @@ float get_octave_noise(vec2 pos)
     float scale = float(SCALE);
     if(scale <= 0.0f)
     {
-        scale += 0.001f;
+        scale = 0.001f;
     }
     
     int octaves = int(OCTAVES);
@@ -143,9 +143,11 @@ float get_octave_noise(vec2 pos)
     float frequency = 1.0f;
     float noiseVal = 0.0f;
     
+    // Add LODs
 #if LEVEL_OF_DETAIL
-    pos = vec2(floor(pos.x), floor(pos.y));
     pos /= float(LEVEL_OF_DETAIL);
+    pos = vec2(floor(pos.x), floor(pos.y));
+    pos *= float(LEVEL_OF_DETAIL);
 #endif
 
     vec2 offset = 3.0f * vec2(iTime * 0.00f, iTime * -1.25f);
@@ -161,9 +163,12 @@ float get_octave_noise(vec2 pos)
 #endif
         float noise = (perlin(vec2(sampleX, sampleY)) * 2.0f) - 1.0f;
         noiseVal += noise * amplitude;
+        // Decrease A and increase F
         amplitude *= persistence;
         frequency *= lacunarity;
-    }     
+    }    
+
+    // Inverser lerp so that noiseval lies between 0 and 1 
 #if SMOOTH_INVERSE_LERP
     noiseVal = smoothstep(-0.95f, 1.1f, noiseVal);
 #else
@@ -176,41 +181,57 @@ float get_octave_noise(vec2 pos)
 vec2 xLimits=vec2(-0.75f,0.75f);
 vec2 cCenter=vec2(0.0f,-0.6f);
 float cRadius=0.9f;
-float coneAngle=45.0f;
-float coneTop=0.0f;
+vec3 darkCol=vec3(0.6f,0.1f,0.0f);
+vec3 lightCol=vec3(1.0f,0.7f,0.0f);
 
 vec3 get_color(vec2 pos)
 {
+    // Get Height Map
     float h=get_octave_noise(pos);
+    // return vec3(h);
+    
+    // Limits on X
     if(pos.x<xLimits.x || pos.x>xLimits.y)
     {
         h=0.0f;
     }
+    // return vec3(h);
+    
+    // Get Circle limits
     float h2=distance(pos,cCenter);
     h2=smoothstep(0.0f,cRadius,h2);
     h2=1.0f-h2;
-    if(h2>0.0f)
-    {
-        h2*=h;
-    }
+    // return vec3(h2);
+    
+    // Apply circle's alpha map
+    h2*=h;
+    // return vec3(h2);
+    
+    // Add threshold
     if(h2<0.2f)
     {
         h2=0.0f;
     }
-    vec3 col=vec3(h2);
+    // return vec3(h2);
+    
+    vec3 col=vec3(0.05f);
     if(h2>0.0f)
     {
-     col=mix(vec3(0.6f,0.1f,0.0f),vec3(1.0f,0.7f,0.0f),h);
+        col=mix(darkCol,lightCol,h);
     }
     return col;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
+    // Get UVs
     vec2 uv=fragCoord/iResolution.xy;
     uv=uv*2.0f-1.0f;
     uv.x*=iResolution.x/iResolution.y;
+    
+    // Get Color
     vec3 col=get_color(uv);
+    
     // Output to screen
     fragColor = vec4(col,1.0);
 }
