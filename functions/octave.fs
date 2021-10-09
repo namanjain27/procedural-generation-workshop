@@ -88,8 +88,12 @@ float noise(float x, float y, float z)
         w);
     return (res + 1.0f) / 2.0f;
 }
+//----------------------------------------------------
+//----------------------------------------------------
+
 
 //----------------------------------------------------
+// OCTAVE_NOISE_GENERATOR
 //----------------------------------------------------
 #define IMAGE_ROWS 50
 #define SCALE 17.5f
@@ -172,26 +176,5 @@ float get_octave_noise(vec2 pos)
 #endif
     return noiseVal;
 }
-
-
-vec3 get_color(vec2 pos)
-{
-    // Get height map
-    float h=get_octave_noise(pos);
-    
-    // Returns height map's color
-    vec3 col=vec3(h);
-    return col;
-}
-
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
-{
-    // Get UVs
-    vec2 uv = fragCoord/iResolution.y;
-    
-    // Get Final Color
-    vec3 col=get_color(uv);
-    
-    // Output to screen
-    fragColor = vec4(col,1.0);
-}
+//----------------------------------------------------
+//----------------------------------------------------

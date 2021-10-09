@@ -1,6 +1,7 @@
 //----------------------------------------------------
 // PERLIN_NOISE_GENERATOR
 //----------------------------------------------------
+
 float fade(float t)
 {
     return t * t * t * (t * ((t * 6.0f) - 15.0f) + 10.0f);
@@ -90,6 +91,11 @@ float noise(float x, float y, float z)
 
 //----------------------------------------------------
 //----------------------------------------------------
+
+
+//----------------------------------------------------
+// FRACTAL_NOISE_GENERATOR
+//----------------------------------------------------
 #define IMAGE_ROWS 50
 #define SCALE 17.5f
 #define SCALE_FROM_CENTER 1
@@ -112,7 +118,7 @@ float perlin(vec2 pos)
     return noise(pos.x, pos.y, 0.0f);
 }
 
-float get_octave_noise(vec2 pos)
+float get_fractal_noise(vec2 pos)
 {
     float rows = float(IMAGE_ROWS);
     pos *= rows;
@@ -120,7 +126,7 @@ float get_octave_noise(vec2 pos)
     float scale = float(SCALE);
     if(scale <= 0.0f)
     {
-        scale += 0.001f;
+        scale = 0.001f;
     }
     
     int octaves = int(OCTAVES);
@@ -138,12 +144,17 @@ float get_octave_noise(vec2 pos)
     float frequency = 1.0f;
     float noiseVal = 0.0f;
     
+    // Add LODs
 #if LEVEL_OF_DETAIL
-    pos = vec2(floor(pos.x), floor(pos.y));
     pos /= float(LEVEL_OF_DETAIL);
+    pos = vec2(floor(pos.x), floor(pos.y));
+    pos *= float(LEVEL_OF_DETAIL);
 #endif
 
-    vec2 offset = 1.0f * vec2(iTime * 1.25f, iTime * 1.25f);
+    vec2 offset = 0.2f * vec2(iTime * 1.25f, iTime * 1.25f);
+    vec2 shift=vec2(45.0f);
+    mat2 rot = mat2(cos(1.5), sin(1.5),
+                    -sin(1.5), cos(1.5));
     
     for (int i = 0; i < octaves; i++)
     {
@@ -154,27 +165,44 @@ float get_octave_noise(vec2 pos)
         float sampleX = (((pos.x-halfX + offset.x*scale) / scale) * frequency);
         float sampleY = (((pos.y-halfY + offset.y*scale) / scale) * frequency);
 #endif
-        float noise =((perlin(vec2(sampleX, sampleY)) * 2.0f) - 1.0f);
+        float noise = (perlin(vec2(sampleX, sampleY)) * 2.0f) - 1.0f;
         noiseVal += abs(noise) * amplitude;
+        // Decrease A and increase F
         amplitude *= persistence;
         frequency *= lacunarity;
-    }     
-    noiseVal=linear_step(0.0f,0.7f,noiseVal);
+        pos=pos*rot+shift;
+    }
+
+    // Inverser lerp so that noiseval lies between 0 and 1 
+    noiseVal=linear_step(0.0f,1.5f,noiseVal);
     return noiseVal;
 }
+//----------------------------------------------------
+//----------------------------------------------------
+#define SHARPNESS 5.5f
+#define OFFSET 1.0f
 
+float get_fractal_height(vec2 pos)
+{
+    float h=get_fractal_noise(pos);
+    h = OFFSET-h;
+    h = pow(h,SHARPNESS);
+    return h;
+}
 
 vec3 get_color(vec2 pos)
 {
-    float h=get_octave_noise(pos);
+    float h=get_fractal_height(pos);
     vec3 col=vec3(h);
     return col;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
+    // Gets UVs
     vec2 uv = fragCoord/iResolution.y;
 
+    //  Gets final Col 
     vec3 col = get_color(uv);
 
     // Output to screen

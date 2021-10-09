@@ -1,6 +1,6 @@
-//------------------------
-// VORONOI_NOISE
-//-------------------------
+//----------------------------------------------------
+// VORONOI_NOISE_GENERATOR
+//----------------------------------------------------
 #define GRID_HEIGHT 10
 
 float rand(vec2 pos)
@@ -27,22 +27,29 @@ float get_voronoi_noise(vec2 pos)
     }
     return dist/sqrt(2.0f);
 }
-//---------------------------------------------
-//---------------------------------------------
+//----------------------------------------------------
+//----------------------------------------------------
 vec3 waterCol=vec3(0.0f,0.34f,0.8f);
 vec3 highlightCol=vec3(0.2f,0.9f,1.0f);
 float p=4.5f;
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
+    // Gets UVs
     vec2 uv=fragCoord/iResolution.y;
     uv*=float(GRID_HEIGHT);
+    
+    // Gets Offser
     vec2 offset=vec2(0.0f);
     offset.y=-iTime*3.0f;
     offset.x=cos(iTime*0.5f)*2.0f;
+    
+    // Get Height Map
     float h=get_voronoi_noise(uv+offset);
     h=clamp(h,0.0f,1.0f);
     h=pow(h,p);
+    
+    // Final Color
     vec3 col=vec3(h)*highlightCol+waterCol;
    
     // Output to screen

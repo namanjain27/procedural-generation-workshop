@@ -29,23 +29,3 @@ float get_voronoi_noise(vec2 pos)
 }
 //----------------------------------------------------
 //----------------------------------------------------
-
-
-vec3 get_color(vec2 pos)
-{
-    float h = get_voronoi_noise(pos);
-    return vec3(h);
-}
-
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
-{
-    // Gets UVs
-    vec2 uv = fragCoord/iResolution.y;
-    uv*=float(GRID_HEIGHT);
-    
-    // Gets final Col
-    vec3 col = get_color(uv);
-
-    // Output to screen
-    fragColor = vec4(col,1.0);
-}

@@ -88,12 +88,12 @@ float noise(float x, float y, float z)
         w);
     return (res + 1.0f) / 2.0f;
 }
-
 //----------------------------------------------------
 //----------------------------------------------------
 
+
 //----------------------------------------------------
-// HEIGHT_MAP_GENERATOR
+// OCTAVE_NOISE_GENERATOR
 //----------------------------------------------------
 #define IMAGE_ROWS 50
 #define SCALE 17.5f
@@ -125,7 +125,7 @@ float get_octave_noise(vec2 pos)
     float scale = float(SCALE);
     if(scale <= 0.0f)
     {
-        scale += 0.001f;
+        scale = 0.001f;
     }
     
     int octaves = int(OCTAVES);
@@ -143,9 +143,11 @@ float get_octave_noise(vec2 pos)
     float frequency = 1.0f;
     float noiseVal = 0.0f;
     
+    // Add LODs
 #if LEVEL_OF_DETAIL
-    pos = vec2(floor(pos.x), floor(pos.y));
     pos /= float(LEVEL_OF_DETAIL);
+    pos = vec2(floor(pos.x), floor(pos.y));
+    pos *= float(LEVEL_OF_DETAIL);
 #endif
 
     vec2 offset = 1.0f * vec2(iTime * 1.25f, iTime * 1.25f);
@@ -161,9 +163,12 @@ float get_octave_noise(vec2 pos)
 #endif
         float noise = (perlin(vec2(sampleX, sampleY)) * 2.0f) - 1.0f;
         noiseVal += noise * amplitude;
+        // Decrease A and increase F
         amplitude *= persistence;
         frequency *= lacunarity;
-    }     
+    }    
+
+    // Inverser lerp so that noiseval lies between 0 and 1 
 #if SMOOTH_INVERSE_LERP
     noiseVal = smoothstep(-0.95f, 1.1f, noiseVal);
 #else
@@ -172,6 +177,11 @@ float get_octave_noise(vec2 pos)
     return noiseVal;
 }
 //----------------------------------------------------
+//----------------------------------------------------
+
+
+//----------------------------------------------------
+// COLOR_MAP_GENERATOR
 //----------------------------------------------------
 // Color Regions
 vec3[8] regions = vec3[8](
@@ -216,23 +226,31 @@ int get_region_index(float h)
 }
 //---------------------------------
 //---------------------------------
+
+
 #define FALLOFF_CURVE 6
 #define FALLOFF_SHIFT 10
 
 // Evaluates the falloff curve to match the border
 float eval_curve(float val)
-{
+{ 
+    // Darkens black region
     float a = float(FALLOFF_CURVE);
+    // Reduces val of light regions
     float b = float(FALLOFF_SHIFT);
     val = pow(val, a) / (pow(val, a) + pow(b - (b * val), a));
     return val;
 }
 
+// Gets Falloff height map
 float get_falloff(vec2 pos)
 {
+    // Streched coordinates
     pos.x/=iResolution.x/iResolution.y;
+    // Origin at center
     pos=pos*2.0f-1.0f;
     float h = max(abs(pos.x), abs(pos.y));
+    // return h;
     h=eval_curve(h);
     return h;
 }
@@ -242,18 +260,23 @@ vec3 get_color(vec2 pos)
     pos.x*=iResolution.x/iResolution.y;
     float h = get_octave_noise(pos);
     // return vec3(h);
+
     float h2=get_falloff(pos);
     // return vec3(h2); 
+
     h=clamp(h-h2,0.0f,1.0f);
     // return vec3(h);
+
     int index=get_region_index(h);
     return regions[index];
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
+    // Gets UVs
     vec2 uv = fragCoord/iResolution.xy;
     
+    // Gets final Col
     vec3 col = get_color(uv);
 
     // Output to screen
