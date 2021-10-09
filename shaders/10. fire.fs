@@ -178,9 +178,86 @@ float get_octave_noise(vec2 pos)
 }
 //----------------------------------------------------
 //----------------------------------------------------
+
+
+//----------------------------------------------------
+// FRACTAL_NOISE_GENERATOR
+//----------------------------------------------------
+#define SHARPNESS 3.5f
+#define OFFSET 1.0f
+
+float get_fractal_noise(vec2 pos)
+{
+    float rows = float(IMAGE_ROWS);
+    pos *= rows;
+    float columns = rows * (iResolution.x / iResolution.y);
+    float scale = float(SCALE);
+    if(scale <= 0.0f)
+    {
+        scale = 0.001f;
+    }
+    
+    int octaves = int(OCTAVES);
+    float lacunarity = max(LACUNARITY, 1.0f);
+    float persistence = min(PERSISTANCE, 1.0f);
+    
+    float halfX = 0.0f;
+    float halfY = 0.0f;
+#if SCALE_FROM_CENTER
+    halfX = columns / 2.0f;
+    halfY = rows / 2.0f;
+#endif
+
+    float amplitude = 1.0f;
+    float frequency = 1.0f;
+    float noiseVal = 0.0f;
+    
+    // Add LODs
+#if LEVEL_OF_DETAIL
+    pos /= float(LEVEL_OF_DETAIL);
+    pos = vec2(floor(pos.x), floor(pos.y));
+    pos *= float(LEVEL_OF_DETAIL);
+#endif
+
+    vec2 offset = 1.0f * vec2(iTime * 0.0f, iTime * -1.25f);
+    vec2 shift=vec2(45.0f);
+    mat2 rot = mat2(cos(1.5), sin(1.5),
+                    -sin(1.5), cos(1.5));
+    
+    for (int i = 0; i < octaves; i++)
+    {
+#if NORMALIZE_OFFSET
+        float sampleX = (((pos.x-halfX) / scale) * frequency) + offset.x;
+        float sampleY = (((pos.y-halfY) / scale) * frequency) + offset.y;
+#else
+        float sampleX = (((pos.x-halfX + offset.x*scale) / scale) * frequency);
+        float sampleY = (((pos.y-halfY + offset.y*scale) / scale) * frequency);
+#endif
+        float noise = (perlin(vec2(sampleX, sampleY)) * 2.0f) - 1.0f;
+        noiseVal += abs(noise) * amplitude;
+        // Decrease A and increase F
+        amplitude *= persistence;
+        frequency *= lacunarity;
+        pos=pos*rot+shift;
+    }
+
+    // Inverser lerp so that noiseval lies between 0 and 1 
+    noiseVal=linear_step(0.0f,1.5f,noiseVal);
+    return noiseVal;
+}
+
+float get_fractal_height(vec2 pos)
+{
+    float h=get_fractal_noise(pos);
+    h = OFFSET-h;
+    h = pow(h,SHARPNESS);
+    return h;
+}
+//----------------------------------------------------
+//----------------------------------------------------
 vec2 xLimits=vec2(-0.75f,0.75f);
 vec2 cCenter=vec2(0.0f,-0.6f);
-float cRadius=0.9f;
+float cRadius=1.0f;
 vec3 darkCol=vec3(0.6f,0.1f,0.0f);
 vec3 lightCol=vec3(1.0f,0.7f,0.0f);
 
@@ -188,17 +265,24 @@ vec3 get_color(vec2 pos)
 {
     // Get Height Map
     float h=get_octave_noise(pos);
+    h=pow(h,1.1f);
     // return vec3(h);
     
+    // Get Fractal height
+    float fH=get_fractal_height(pos);
+    // return vec3(fH);
+    
     // Limits on X
-    if(pos.x<xLimits.x || pos.x>xLimits.y)
+    vec2 limits=xLimits+vec2(pos.y+0.3f,-(pos.y+0.3f));
+    if((pos.x<limits.x || pos.x<xLimits.x) ||(pos.x>limits.y || pos.x>xLimits.y))
     {
         h=0.0f;
     }
     // return vec3(h);
     
+    
     // Get Circle limits
-    float h2=distance(pos,cCenter);
+    float h2=distance(pos,cCenter)/cRadius;
     h2=smoothstep(0.0f,cRadius,h2);
     h2=1.0f-h2;
     // return vec3(h2);
@@ -207,17 +291,23 @@ vec3 get_color(vec2 pos)
     h2*=h;
     // return vec3(h2);
     
-    // Add threshold
-    if(h2<0.2f)
+    // Apply Fractal distortion
+    h2*=fH;
+    h2=smoothstep(0.0f,0.3f,h2);
+    // return vec3(h2);
+    
+    // Apply threshold
+    if(h2<0.15f)
     {
         h2=0.0f;
     }
     // return vec3(h2);
     
+    // Set Final Color
     vec3 col=vec3(0.05f);
     if(h2>0.0f)
     {
-        col=mix(darkCol,lightCol,h);
+        col=mix(darkCol,lightCol,h2);
     }
     return col;
 }
